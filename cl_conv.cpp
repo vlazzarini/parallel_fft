@@ -12,13 +12,11 @@
 #include <vector>
 #include <cmath>
 
-#define OPENQ const char *pconvcode = R"(
-#define CLOSEQ   )";
-
 namespace cl_conv {
 
   const double PI = M_PI;
-  
+
+  /** Open CL kernels */
 #include "cl_conv_kernels.h"  
 
   /**  kernel dispatch functions 
