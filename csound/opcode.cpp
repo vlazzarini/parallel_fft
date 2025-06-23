@@ -244,6 +244,7 @@ namespace csnd {
           if (++cnt == parts) {
             if (clpconv->convolution(bufout.data(), bufin.data()) != CL_SUCCESS)
               return csound->perf_error("error computing convolution\n", this);
+            clpconv->synchronise();
             cnt = 0;
           }
         }
@@ -314,7 +315,7 @@ namespace csnd {
       AudioSig asig1(this, inargs(0));
       AudioSig asig2(this, inargs(1));
       AudioSig aout(this, outargs(0));
-      int frz1 = (int)inargs[2], frz2 = (int)inargs[2];
+      int frz1 = (int)inargs[2], frz2 = (int)inargs[3];
       MYFLT _0dbfs = csound->_0dbfs();
 
       if (dconv) {
@@ -336,6 +337,7 @@ namespace csnd {
             if (clpconv->convolution(bufout.data(), bufin1.data(),
                                      bufin2.data()) != CL_SUCCESS)
               return csound->perf_error("error computing convolution\n", this);
+            clpconv->synchronise();
             cnt = 0;
           }
         }
@@ -344,9 +346,144 @@ namespace csnd {
     }
   };
 
+  struct TVConvS : Plugin<2, 9> {
+    cl_conv::Clpconv *clpconvl,*clpconvr;
+    cl_conv::Cldconv *cldconvl,*cldconvr;
+    int parts, cnt;
+    bool dconv;
+    csnd::AuxMem<float> bufin1l, bufin1r, bufin2l, bufin2r,
+      bufoutl, bufoutr;
+
+    int init() {
+      int size;
+      int err;
+      cl_device_id device_ids[32], id;
+      cl_uint num = 0, nump = 0;
+      char name[128];
+
+      err = clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, 32, device_ids, &num);
+      if (err != CL_SUCCESS)
+        return csound->init_error("failed to find an OpenCL device!\n");
+      id = device_ids[(int)inargs[8]];
+      clGetDeviceInfo(id, CL_DEVICE_NAME, 128, name, NULL);
+      csound->message("using device: ");
+      csound->message(name);
+      size = inargs[7];
+      parts = inargs[6];
+      dconv = parts == 1 ? true : false;
+      if (dconv) {
+        int ksmps = insdshead->ksmps;
+        cldconvl = new cl_conv::Cldconv(id, size, ksmps, err_msg, (void *)csound);
+        cldconvr = new cl_conv::Cldconv(id, size, ksmps, err_msg, (void *)csound);
+        if (cldconvr->get_cl_err() == CL_SUCCESS &&
+            cldconvl->get_cl_err() == CL_SUCCESS) {
+          bufoutl.allocate(csound, ksmps);
+          bufin1l.allocate(csound, ksmps);
+          bufin2l.allocate(csound, ksmps);
+          bufoutr.allocate(csound, ksmps);
+          bufin1r.allocate(csound, ksmps);
+          bufin2r.allocate(csound, ksmps);
+          cnt = 0;
+          return OK;
+        }
+        delete cldconvr;
+        cldconvr = NULL;
+        delete cldconvl;
+        cldconvl = NULL;        
+      } else {
+        clpconvl = new cl_conv::Clpconv(id, size, parts, err_msg, (void *)csound);
+        clpconvr = new cl_conv::Clpconv(id, size, parts, err_msg, (void *)csound);
+        if (clpconvl->get_cl_err() == CL_SUCCESS &&
+            clpconvr->get_cl_err() == CL_SUCCESS 
+             ) {
+          cnt = 0;
+          bufoutl.allocate(csound, parts);
+          bufin1l.allocate(csound, parts);
+          bufin2l.allocate(csound, parts);
+          bufoutr.allocate(csound, parts);
+          bufin1r.allocate(csound, parts);
+          bufin2r.allocate(csound, parts);          
+          return OK;
+        }
+        delete clpconvr;
+        delete clpconvl;
+        clpconvr = clpconvl = NULL;
+      }
+      return csound->init_error("error initialising opencl object");
+    }
+
+    int deinit() {
+      if (dconv && cldconvl && cldconvr) {
+       delete cldconvl;
+       delete cldconvr;
+      }
+      else if(clpconvr && clpconvl) {
+        delete clpconvr;
+        delete clpconvl;
+      }
+      return OK;
+    }
+
+    int aperf() {
+      AudioSig asig1l(this, inargs(0));
+      AudioSig asig2l(this, inargs(1));
+      AudioSig asig1r(this, inargs(2));
+      AudioSig asig2r(this, inargs(3));
+      AudioSig aoutl(this, outargs(0));
+      AudioSig aoutr(this, outargs(1));
+      int frz1 = (int)inargs[54], frz2 = (int)inargs[5];
+      MYFLT _0dbfs = csound->_0dbfs();
+
+      if (dconv) {
+        for (int n = offset; n < nsmps; n++) {
+          bufin1l[n] = (float)frz1 ? (float)(asig1l[n] / _0dbfs) : bufin1l[cnt];
+          bufin1l[n] = (float)frz1 ? (float)(asig1l[n] / _0dbfs) : bufin1l[cnt];       
+          bufin2r[n] = (float)frz1 ? (float)(asig2r[n] / _0dbfs) : bufin2r[cnt];
+          bufin2l[n] = (float)frz1 ? (float)(asig2l[n] / _0dbfs) : bufin2l[cnt];       
+        }
+        if ((cldconvl->convolution(bufoutr.data(), bufin1r.data(), bufin2r.data()) !=
+             CL_SUCCESS) &&
+            (cldconvr->convolution(bufoutl.data(), bufin1l.data(), bufin2l.data()) !=
+             CL_SUCCESS)
+            )
+          return csound->perf_error("error computing convolution\n", this);
+        for (int n = offset; n < nsmps; n++){
+          aoutl[n] = bufoutl[n] * _0dbfs;
+          aoutr[n] = bufoutr[n] * _0dbfs;
+        }
+      } else {
+        for (int n = offset; n < nsmps; n++) {
+          bufin1l[n] = (float)frz1 ? (float)(asig1l[n] / _0dbfs) : bufin1l[cnt];
+          bufin1l[n] = (float)frz1 ? (float)(asig1l[n] / _0dbfs) : bufin1l[cnt];       
+          bufin2r[n] = (float)frz1 ? (float)(asig2r[n] / _0dbfs) : bufin2r[cnt];
+          bufin2l[n] = (float)frz1 ? (float)(asig2l[n] / _0dbfs) : bufin2l[cnt]; 
+          aoutl[n] = bufoutl[n] * _0dbfs;
+          aoutr[n] = bufoutr[n] * _0dbfs;  
+          if (++cnt == parts) {
+            if ((clpconvl->convolution(bufoutr.data(), bufin1r.data(),
+                                      bufin2r.data()) != CL_SUCCESS) &&
+                (clpconvr->convolution(bufoutl.data(), bufin1l.data(),
+                                      bufin2l.data()) != CL_SUCCESS)
+                )
+              return csound->perf_error("error computing convolution\n", this);
+            clpconvl->synchronise();
+            clpconvr->synchronise();
+            cnt = 0;
+          }
+        }
+      }
+      return OK;
+    }
+  };
+
+
+
+
+  
   void on_load(Csound *csound) {
     plugin<Conv>(csound, "clconv", "a", "aiiioo", csnd::thread::ia);
     plugin<TVConv>(csound, "cltvconv", "a", "aakkiii", csnd::thread::ia);
+    plugin<TVConvS>(csound, "cltvconv", "aa", "aaaakkiii", csnd::thread::ia);
     plugin<Cfft>(csound, "clfft", "k[]", "k[]ii", csnd::thread::ik);
     plugin<Rfft>(csound, "clrfft", "k[]", "k[]ii", csnd::thread::ik);
   }

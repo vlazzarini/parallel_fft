@@ -185,6 +185,10 @@ public:
   /** get a recorded error code, CL_SUCCESS if no error was recorded
    */
   int get_cl_err() { return cl_err; }
+
+  /** this needs to be called after convolution to
+      synchronise threads */
+  void synchronise() { clFinish(commands1); }
 };
 }
 #endif

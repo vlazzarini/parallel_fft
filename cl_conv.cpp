@@ -540,7 +540,7 @@ namespace cl_conv {
     if (cl_err != CL_SUCCESS)
       return cl_err;
     if (!host_mem)
-      cl_err = clEnqueueReadBuffer(commands1, olap, CL_TRUE, 0, bytes >> 1,
+      cl_err = clEnqueueReadBuffer(commands1, olap, 0, 0, bytes >> 1,
                                    output, 0, NULL, NULL);
     return cl_err;
   }
