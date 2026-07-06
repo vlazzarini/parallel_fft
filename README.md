@@ -13,7 +13,7 @@ convolution. Csound opcodes for linear time-invariant and time-varying
 convolution, as well as complex-to-complex and
 real-to-complex/complex-to-real FFTs are also provided.
 
-Victor Lazzarini, 2019   
-Updated for Csound 7, March 2025
-Added Metal port, July 2026
+Victor Lazzarini, 2019     
+Updated for Csound 7, March 2025  
+Added Metal port, July 2026  
 ******
