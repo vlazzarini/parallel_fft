@@ -17,3 +17,5 @@ target_link_libraries(test_mt_rfft mt_fft)
 set_property(TARGET mt_fft PROPERTY CXX_STANDARD 17)
 set_property(TARGET test_mt_cfft PROPERTY CXX_STANDARD 17)
 set_property(TARGET test_mt_rfft PROPERTY CXX_STANDARD 17)
+
+add_subdirectory(csound)
