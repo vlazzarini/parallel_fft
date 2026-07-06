@@ -68,82 +68,86 @@ namespace csnd {
         return OK;
      }
 
-     int perf() {
-        int err;
-        Vector<MYFLT> input = inargs.vector_data<MYFLT>(0);
-        Vector<MYFLT> output = outargs.vector_data<MYFLT>(0);
-        std::complex<float> *data =
-          reinterpret_cast<std::complex<float>*>(buf.data());
+      int perf() {
+         int err;
+         int i = 0;
+         Vector<MYFLT> input = inargs.vector_data<MYFLT>(0);
+         Vector<MYFLT> output = outargs.vector_data<MYFLT>(0);
+         std::complex<float> *data =
+           reinterpret_cast<std::complex<float>*>(buf.data());
 
-        for(auto s : input)
-          buf[i] = s;
-        
-        err = dft->transform(data);
+         for(auto s : input)
+           buf[i++] = s;
+         
+         err = dft->transform(data);
 
-        if ((err = dft->get_error()) > 0) 
-          return csound->perf_error(cl_fft::cl_error_string(err), this);
+         if ((err = dft->get_error()) > 0) 
+           return csound->perf_error(cl_fft::cl_error_string(err), this);
 
-         for(auto &s : output)
-           s = buf[i];
-    
-        return OK;
+          i = 0;
+          for(auto &s : output)
+            s = buf[i++];
+     
+         return OK;
+       }
+
+       int deinit() {
+         delete dft;
+         return OK;
+       }
+
+   };
+
+    struct Rfft : Plugin<1,3> {
+     
+     cl_fft::Clrfft *dft;
+     csnd::AuxMem<float> buf;
+     
+     int init() {
+         int err;
+         cl_device_id device_ids[32], id;
+         cl_uint num = 0;
+         char name[128];
+         Vector<MYFLT> input = inargs.vector_data<MYFLT>(0);
+         Vector<MYFLT> output = outargs.vector_data<MYFLT>(0);
+         output.init(csound, input.len(), this->insdshead);
+
+         err = clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, 32, device_ids, &num);
+         if (err != CL_SUCCESS)
+           return csound->init_error("failed to find an OpenCL device!\n");
+         id = device_ids[(int)inargs[2]];
+         clGetDeviceInfo(id, CL_DEVICE_NAME, 128, name, NULL);
+         csound->message("using device: ");
+         csound->message(name);
+         dft = new cl_fft::Clrfft(id, np2(input.len()), inargs[1] ? true : false);
+         if ((err = dft->get_error()) > 0) 
+           return csound->init_error(cl_fft::cl_error_string(err));
+         buf.allocate(csound, input.len());
+         return OK;
       }
 
-      int deinit() {
-        delete dft;
-        return OK;
-      }
+      int perf() {
+         int err;
+         int i = 0;
+         Vector<MYFLT> input = inargs.vector_data<MYFLT>(0);
+         Vector<MYFLT> output = outargs.vector_data<MYFLT>(0);
+         std::complex<float> *data =
+           reinterpret_cast<std::complex<float>*>(buf.data());
 
-  };
+         for(auto s : input)
+           buf[i++] = s;
+         
+         err = dft->transform(data);
 
-   struct Rfft : Plugin<1,3> {
-    
-    cl_fft::Clrfft *dft;
-    csnd::AuxMem<float> buf;
-    
-    int init() {
-        int err;
-        cl_device_id device_ids[32], id;
-        cl_uint num = 0;
-        char name[128];
-        Vector<MYFLT> input = inargs.vector_data<MYFLT>(0);
-        Vector<MYFLT> output = outargs.vector_data<MYFLT>(0);
-        output.init(csound, input.len(), this->insdshead);
+         if ((err = dft->get_error()) > 0) 
+           return csound->perf_error(cl_fft::cl_error_string(err), this);
 
-        err = clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, 32, device_ids, &num);
-        if (err != CL_SUCCESS)
-          return csound->init_error("failed to find an OpenCL device!\n");
-        id = device_ids[(int)inargs[2]];
-        clGetDeviceInfo(id, CL_DEVICE_NAME, 128, name, NULL);
-        csound->message("using device: ");
-        csound->message(name);
-        dft = new cl_fft::Clrfft(id, np2(input.len()), inargs[1] ? true : false);
-        if ((err = dft->get_error()) > 0) 
-          return csound->init_error(cl_fft::cl_error_string(err));
-        buf.allocate(csound, input.len());
-        return OK;
-     }
-
-     int perf() {
-        int err;
-        Vector<MYFLT> input = inargs.vector_data<MYFLT>(0);
-        Vector<MYFLT> output = outargs.vector_data<MYFLT>(0);
-        std::complex<float> *data =
-          reinterpret_cast<std::complex<float>*>(buf.data());
-
-        for(auto s : input)
-          buf[i] = s;
-        
-        err = dft->transform(data);
-
-        if ((err = dft->get_error()) > 0) 
-          return csound->perf_error(cl_fft::cl_error_string(err), this);
-
-         for(auto &s : output)
-           s = buf[i];
-    
-        return OK;
-      }
+          i = 0;
+          for(auto &s : output)
+            s = buf[i++];
+     
+         return OK;
+       }
 
       int deinit() {
         delete dft;
@@ -431,13 +435,13 @@ namespace csnd {
       AudioSig asig2r(this, inargs(3));
       AudioSig aoutl(this, outargs(0));
       AudioSig aoutr(this, outargs(1));
-      int frz1 = (int)inargs[54], frz2 = (int)inargs[5];
+      int frz1 = (int)inargs[4], frz2 = (int)inargs[5];
       MYFLT _0dbfs = csound->_0dbfs();
 
       if (dconv) {
         for (int n = offset; n < nsmps; n++) {
           bufin1l[n] = (float)frz1 ? (float)(asig1l[n] / _0dbfs) : bufin1l[cnt];
-          bufin1l[n] = (float)frz1 ? (float)(asig1l[n] / _0dbfs) : bufin1l[cnt];       
+          bufin1r[n] = (float)frz1 ? (float)(asig1r[n] / _0dbfs) : bufin1r[cnt];       
           bufin2r[n] = (float)frz1 ? (float)(asig2r[n] / _0dbfs) : bufin2r[cnt];
           bufin2l[n] = (float)frz1 ? (float)(asig2l[n] / _0dbfs) : bufin2l[cnt];       
         }
@@ -454,7 +458,7 @@ namespace csnd {
       } else {
         for (int n = offset; n < nsmps; n++) {
           bufin1l[n] = (float)frz1 ? (float)(asig1l[n] / _0dbfs) : bufin1l[cnt];
-          bufin1l[n] = (float)frz1 ? (float)(asig1l[n] / _0dbfs) : bufin1l[cnt];       
+          bufin1r[n] = (float)frz1 ? (float)(asig1r[n] / _0dbfs) : bufin1r[cnt];       
           bufin2r[n] = (float)frz1 ? (float)(asig2r[n] / _0dbfs) : bufin2r[cnt];
           bufin2l[n] = (float)frz1 ? (float)(asig2l[n] / _0dbfs) : bufin2l[cnt]; 
           aoutl[n] = bufoutl[n] * _0dbfs;

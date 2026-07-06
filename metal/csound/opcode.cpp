@@ -2,7 +2,7 @@
   opcode.cpp: Metal convolution & FFT opcodes
   Port of opencl/csound/opcode.cpp to Apple Metal
 
-  Copyright (C) 2019 Victor Lazzarini
+  Copyright (C) 2019-26 Victor Lazzarini
   This file is part of Csound.
 
   The Csound Library is free software; you can redistribute it
@@ -69,17 +69,18 @@ namespace csnd {
     }
 
     int perf() {
+      int i = 0;
       Vector<MYFLT> input = inargs.vector_data<MYFLT>(0);
       Vector<MYFLT> output = outargs.vector_data<MYFLT>(0);
-      int len = input.len();
-      for (int i = 0; i < len; i++)
-        buf[i] = input[i];
+      for (auto s : input)
+        buf[i++] = s;
       std::complex<float> *data =
         reinterpret_cast<std::complex<float>*>(buf.data());
       if (dft->transform(data))
         return csound->perf_error("error computing FFT\n", this);
-      for (int i = 0; i < output.len(); i++)
-        output[i] = buf[i];
+      i = 0;
+      for (auto &s : output)
+        s = buf[i++];
       return OK;
     }
 
@@ -118,17 +119,18 @@ namespace csnd {
     }
 
     int perf() {
+      int i = 0;
       Vector<MYFLT> input = inargs.vector_data<MYFLT>(0);
       Vector<MYFLT> output = outargs.vector_data<MYFLT>(0);
-      int len = input.len();
-      for (int i = 0; i < len; i++)
-        buf[i] = input[i];
+      for (auto s : input)
+        buf[i++] = s;
       std::complex<float> *data =
         reinterpret_cast<std::complex<float>*>(buf.data());
       if (dft->transform(data))
         return csound->perf_error("error computing FFT\n", this);
-      for (int i = 0; i < output.len(); i++)
-        output[i] = buf[i];
+      i = 0;
+      for (auto &s : output)
+        s = buf[i++];
       return OK;
     }
 
