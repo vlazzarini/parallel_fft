@@ -40,7 +40,7 @@ namespace csnd {
     cs->message(s);
   }
 
-  struct MtCfft : Plugin<1, 3> {
+  struct MtCfft : Plugin<1, 4> {
     mt_fft::Mtcfft *dft;
     csnd::AuxMem<float> buf;
 
@@ -50,11 +50,18 @@ namespace csnd {
       output.init(csound, input.len(), this->insdshead);
 
       NS::AutoreleasePool *pool = NS::AutoreleasePool::alloc()->init();
-      MTL::Device *device = MTL::CreateSystemDefaultDevice();
-      if (!device) {
+      NS::Array *mtldevices = MTL::CopyAllDevices();
+      int nd = mtldevices ? (int)mtldevices->count() : 0;
+      if (!nd) {
         pool->drain();
         return csound->init_error("failed to find a Metal device!\n");
       }
+      int devidx = (int)inargs[2];
+      if (devidx < 0 || devidx >= nd) {
+        csound->message("Metal device index out of range, using device 0\n");
+        devidx = 0;
+      }
+      MTL::Device *device = (MTL::Device*)mtldevices->object(devidx);
       const char *name = device->name()->utf8String();
       csound->message("using device: ");
       csound->message(name);
@@ -90,7 +97,7 @@ namespace csnd {
     }
   };
 
-  struct MtRfft : Plugin<1, 3> {
+  struct MtRfft : Plugin<1, 4> {
     mt_fft::Mtrfft *dft;
     csnd::AuxMem<float> buf;
 
@@ -100,11 +107,18 @@ namespace csnd {
       output.init(csound, input.len(), this->insdshead);
 
       NS::AutoreleasePool *pool = NS::AutoreleasePool::alloc()->init();
-      MTL::Device *device = MTL::CreateSystemDefaultDevice();
-      if (!device) {
+      NS::Array *mtldevices = MTL::CopyAllDevices();
+      int nd = mtldevices ? (int)mtldevices->count() : 0;
+      if (!nd) {
         pool->drain();
         return csound->init_error("failed to find a Metal device!\n");
       }
+      int devidx = (int)inargs[2];
+      if (devidx < 0 || devidx >= nd) {
+        csound->message("Metal device index out of range, using device 0\n");
+        devidx = 0;
+      }
+      MTL::Device *device = (MTL::Device*)mtldevices->object(devidx);
       const char *name = device->name()->utf8String();
       csound->message("using device: ");
       csound->message(name);
@@ -140,7 +154,7 @@ namespace csnd {
     }
   };
 
-  struct MtConv : Plugin<1, 6> {
+  struct MtConv : Plugin<1, 7> {
     mt_conv::Mtpconv *mtpconv;
     mt_conv::Mtdconv *mtdconv;
     Table ir;
@@ -152,16 +166,22 @@ namespace csnd {
       int size;
       int err;
       NS::AutoreleasePool *pool = NS::AutoreleasePool::alloc()->init();
-      MTL::Device *device = MTL::CreateSystemDefaultDevice();
-      if (!device) {
+      NS::Array *mtldevices = MTL::CopyAllDevices();
+      int nd = mtldevices ? (int)mtldevices->count() : 0;
+      if (!nd) {
         pool->drain();
         return csound->init_error("failed to find a Metal device!\n");
       }
+      int devidx = (int)inargs[6];
+      if (devidx < 0 || devidx >= nd) {
+        csound->message("Metal device index out of range, using device 0\n");
+        devidx = 0;
+      }
+      MTL::Device *device = (MTL::Device*)mtldevices->object(devidx);
       const char *name = device->name()->utf8String();
       csound->message("using device: ");
       csound->message(name);
       csound->message("\n");
-      pool->drain();
 
       ir.init(csound, inargs(1));
       parts = inargs[2];
@@ -172,6 +192,7 @@ namespace csnd {
       if (dconv) {
         int ksmps = insdshead->ksmps;
         mtdconv = new mt_conv::Mtdconv(device, size, ksmps, mt_err_msg, (void *)csound);
+        pool->drain();
         if (!mtdconv->get_mt_err()) {
           std::vector<float> coefs(size);
           for (int i = 0; i < size; i++)
@@ -188,6 +209,7 @@ namespace csnd {
         mtdconv = NULL;
       } else {
         mtpconv = new mt_conv::Mtpconv(device, size, parts, mt_err_msg, (void *)csound);
+        pool->drain();
         if (!mtpconv->get_mt_err()) {
           std::vector<float> coefs(size);
           for (int i = 0; i < size; i++)
@@ -250,16 +272,22 @@ namespace csnd {
     int init() {
       int size;
       NS::AutoreleasePool *pool = NS::AutoreleasePool::alloc()->init();
-      MTL::Device *device = MTL::CreateSystemDefaultDevice();
-      if (!device) {
+      NS::Array *mtldevices = MTL::CopyAllDevices();
+      int nd = mtldevices ? (int)mtldevices->count() : 0;
+      if (!nd) {
         pool->drain();
         return csound->init_error("failed to find a Metal device!\n");
       }
+      int devidx = (int)inargs[6];
+      if (devidx < 0 || devidx >= nd) {
+        csound->message("Metal device index out of range, using device 0\n");
+        devidx = 0;
+      }
+      MTL::Device *device = (MTL::Device*)mtldevices->object(devidx);
       const char *name = device->name()->utf8String();
       csound->message("using device: ");
       csound->message(name);
       csound->message("\n");
-      pool->drain();
 
       size = inargs[5];
       parts = inargs[4];
@@ -267,6 +295,7 @@ namespace csnd {
       if (dconv) {
         int ksmps = insdshead->ksmps;
         mtdconv = new mt_conv::Mtdconv(device, size, ksmps, mt_err_msg, (void *)csound);
+        pool->drain();
         if (!mtdconv->get_mt_err()) {
           bufout.allocate(csound, ksmps);
           bufin1.allocate(csound, ksmps);
@@ -278,6 +307,7 @@ namespace csnd {
         mtdconv = NULL;
       } else {
         mtpconv = new mt_conv::Mtpconv(device, size, parts, mt_err_msg, (void *)csound);
+        pool->drain();
         if (!mtpconv->get_mt_err()) {
           cnt = 0;
           bufout.allocate(csound, parts);
@@ -343,16 +373,22 @@ namespace csnd {
     int init() {
       int size;
       NS::AutoreleasePool *pool = NS::AutoreleasePool::alloc()->init();
-      MTL::Device *device = MTL::CreateSystemDefaultDevice();
-      if (!device) {
+      NS::Array *mtldevices = MTL::CopyAllDevices();
+      int nd = mtldevices ? (int)mtldevices->count() : 0;
+      if (!nd) {
         pool->drain();
         return csound->init_error("failed to find a Metal device!\n");
       }
+      int devidx = (int)inargs[8];
+      if (devidx < 0 || devidx >= nd) {
+        csound->message("Metal device index out of range, using device 0\n");
+        devidx = 0;
+      }
+      MTL::Device *device = (MTL::Device*)mtldevices->object(devidx);
       const char *name = device->name()->utf8String();
       csound->message("using device: ");
       csound->message(name);
       csound->message("\n");
-      pool->drain();
 
       size = inargs[7];
       parts = inargs[6];
@@ -361,6 +397,7 @@ namespace csnd {
         int ksmps = insdshead->ksmps;
         mtdconvl = new mt_conv::Mtdconv(device, size, ksmps, mt_err_msg, (void *)csound);
         mtdconvr = new mt_conv::Mtdconv(device, size, ksmps, mt_err_msg, (void *)csound);
+        pool->drain();
         if (!mtdconvr->get_mt_err() && !mtdconvl->get_mt_err()) {
           bufoutl.allocate(csound, ksmps);
           bufin1l.allocate(csound, ksmps);
@@ -378,6 +415,7 @@ namespace csnd {
       } else {
         mtpconvl = new mt_conv::Mtpconv(device, size, parts, mt_err_msg, (void *)csound);
         mtpconvr = new mt_conv::Mtpconv(device, size, parts, mt_err_msg, (void *)csound);
+        pool->drain();
         if (!mtpconvl->get_mt_err() && !mtpconvr->get_mt_err()) {
           cnt = 0;
           bufoutl.allocate(csound, parts);
@@ -456,10 +494,10 @@ namespace csnd {
   };
 
   void on_load(Csound *csound) {
-    plugin<MtConv>(csound, "mtconv", "a", "aiiioo", csnd::thread::ia);
+    plugin<MtConv>(csound, "mtconv", "a", "aiiiooo", csnd::thread::ia);
     plugin<MtTVConv>(csound, "mttvconv", "a", "aakkiii", csnd::thread::ia);
     plugin<MtTVConvS>(csound, "mttvconv", "aa", "aaaakkiii", csnd::thread::ia);
-    plugin<MtCfft>(csound, "mtfft", "k[]", "k[]ii", csnd::thread::ik);
-    plugin<MtRfft>(csound, "mtrfft", "k[]", "k[]ii", csnd::thread::ik);
+    plugin<MtCfft>(csound, "mtfft", "k[]", "k[]iii", csnd::thread::ik);
+    plugin<MtRfft>(csound, "mtrfft", "k[]", "k[]iii", csnd::thread::ik);
   }
 }

@@ -1,5 +1,6 @@
 <CsoundSynthesizer>
 <CsOptions>
+--opcode-lib=./libcl_conv.dylib -n
 </CsOptions>
 <CsInstruments>
 ksmps = 64
@@ -21,6 +22,7 @@ endin
 
 </CsInstruments>
 <CsScore>
+i1 0 60 8 20 0
 </CsScore>
 </CsoundSynthesizer>
 

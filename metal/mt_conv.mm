@@ -17,6 +17,7 @@ namespace mt_conv {
 const double PI = M_PI;
 
 const char *pconv_msl = R"(
+using namespace metal;
 typedef float2 cmplx;
 
 inline void atomic_add_f(device float *source, const float operand) {
@@ -24,8 +25,9 @@ inline void atomic_add_f(device float *source, const float operand) {
   prevVal.floatVal = *source;
   do {
     newVal.floatVal = prevVal.floatVal + operand;
-  } while (!atomic_compare_exchange_weak(
-    (device atomic_uint *)source, &prevVal.intVal, newVal.intVal));
+  } while (!atomic_compare_exchange_weak_explicit(
+    (device atomic_uint *)source, &prevVal.intVal, newVal.intVal,
+    memory_order_relaxed, memory_order_relaxed));
 }
 
 kernel void reorder(device cmplx *out [[buffer(0)]],
@@ -120,9 +122,9 @@ kernel void convol(device float *out [[buffer(0)]],
   if (n) {
     float inr = (in + n)->x, ini = (in + n)->y;
     float ckr = (coef + k)->x, cki = (coef + k)->y;
-    s = (cmplx)(inr * ckr - ini * cki, inr * cki + ini * ckr);
+    s = float2(inr * ckr - ini * cki, inr * cki + ini * ckr);
   } else {
-    s = (cmplx)((in + 0)->x * (coef + k)->x, (in + 0)->y * (coef + k)->y);
+    s = float2((in + 0)->x * (coef + k)->x, (in + 0)->y * (coef + k)->y);
   }
   atomic_add_f(&out[n2], s.x);
   atomic_add_f(&out[n2 + 1], s.y);

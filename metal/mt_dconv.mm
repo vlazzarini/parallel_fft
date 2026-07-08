@@ -13,13 +13,15 @@
 namespace mt_conv {
 
 const char *dconv_msl = R"(
+using namespace metal;
 inline void atomic_add_f(device float *source, const float operand) {
   union { uint intVal; float floatVal; } newVal, prevVal;
   prevVal.floatVal = *source;
   do {
     newVal.floatVal = prevVal.floatVal + operand;
-  } while (!atomic_compare_exchange_weak(
-    (device atomic_uint *)source, &prevVal.intVal, newVal.intVal));
+  } while (!atomic_compare_exchange_weak_explicit(
+    (device atomic_uint *)source, &prevVal.intVal, newVal.intVal,
+    memory_order_relaxed, memory_order_relaxed));
 }
 
 kernel void convol(device float *out [[buffer(0)]],

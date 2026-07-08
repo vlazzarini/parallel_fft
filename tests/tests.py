@@ -3,7 +3,7 @@ import pylab as pl
 import time
 
 devs = 3
-dur = 100.0
+dur = 10
 tests = []
 
 gpu = []
@@ -19,13 +19,14 @@ for M in ps:
   for dev in range(0,devs):
    aver.append(0.0)
    for i in range(0,repeats):
-    cs.compile_("csound", "tests.csd", "--opcode-lib=./libclconv.dylib", "-n", "-dm0")
-    cs.readScore("i1 0 %d %d %d %d" % (dur, M, N, dev))
-    cs.performKsmps()
-    ti = time.clock()
-    while cs.scoreTime() < dur:
-     cs.performKsmps()
-    aver[dev] += time.clock() - ti
+    cs.compile_("csound", "tests.csd", "-n", "-d")
+    cs.start()
+    cs.event_string("i1 0 %d %d %d %d" % (dur, M, N, dev))
+    cs.perform_ksmps()
+    ti = time.process_time()
+    while cs.score_time() < dur:
+     cs.perform_ksmps()
+    aver[dev] += time.process_time() - ti
     cs.reset()
    aver[dev] /= repeats
    print(aver[dev])
@@ -65,7 +66,7 @@ for test in tests:
 
 fig.tight_layout()
 pl.savefig("plot.eps")
-#pl.show()
+pl.show()
 
 table = '''{\\bf 512} & %.1f & %.1f & %.1f & %.1f & %.1f  & %.1f  & %.1f  \\\\ \hline
 {\\bf 2048} & %.1f & %.1f & %.1f & %.1f & %.1f  & %.1f  & %.1f \\\\ \hline
@@ -73,4 +74,4 @@ table = '''{\\bf 512} & %.1f & %.1f & %.1f & %.1f & %.1f  & %.1f  & %.1f  \\\\ \
 {\\bf 32768} & %.1f & %.1f & %.1f & %.1f & %.1f & %.1f  & %.1f \\\\ \hline''' % tuple(gpu)
 f = open("table.tex", "w")
 f.write(table)
-print(table)
+#print(table)
