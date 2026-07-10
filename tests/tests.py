@@ -3,13 +3,13 @@ import pylab as pl
 import time
 
 devs = 3
-dur = 10
+dur = (2**24)/44100
 tests = []
 
 gpu = []
 ps = [9,11,13,15]
 cs = csnd.Csound()
-lens = [16,17,18,19,20,21,22]
+lens = [20,21,22,23,24]
 for M in ps:
  runs = []
  for N in lens:
@@ -23,10 +23,10 @@ for M in ps:
     cs.start()
     cs.event_string("i1 0 %d %d %d %d" % (dur, M, N, dev))
     cs.perform_ksmps()
-    ti = time.process_time()
+    ti = time.perf_counter()
     while cs.score_time() < dur:
      cs.perform_ksmps()
-    aver[dev] += time.process_time() - ti
+    aver[dev] += time.perf_counter() - ti
     cs.reset()
    aver[dev] /= repeats
    print(aver[dev])
@@ -38,12 +38,9 @@ for M in ps:
 
 pl.rcParams["figure.figsize"] = (8,8)
 fig, axs = pl.subplots(len(tests)//2, len(tests)//2)
-
-
 fmt = ['k:', 'k--', 'k']
+lbl = ['cpu','gpu','serial']
 
-
-    
 n = 0
 for test in tests:  
  for i in range(0,devs):
@@ -57,7 +54,8 @@ for test in tests:
     axs[n%2,n//2].set_title("$M=$%d" % 2**ps[n])
     axs[n%2,n//2].set(ylabel='RT ratio')
     axs[n%2,n//2].set(xlabel='$\log_2L$')
-    axs[n%2,n//2].plot(lens, d, fmt[i])
+    axs[n%2,n//2].plot(lens, d, fmt[i], label=lbl[i])
+    axs[n%2,n//2].legend()
     axs[n%2,n//2].grid()
 
  n += 1
@@ -65,13 +63,13 @@ for test in tests:
 
 
 fig.tight_layout()
-pl.savefig("plot.eps")
+pl.savefig("plot.jpg")
 pl.show()
 
-table = '''{\\bf 512} & %.1f & %.1f & %.1f & %.1f & %.1f  & %.1f  & %.1f  \\\\ \hline
-{\\bf 2048} & %.1f & %.1f & %.1f & %.1f & %.1f  & %.1f  & %.1f \\\\ \hline
-{\\bf 8192} & %.1f & %.1f & %.1f & %.1f & %.1f  & %.1f  & %.1f \\\\ \hline
-{\\bf 32768} & %.1f & %.1f & %.1f & %.1f & %.1f & %.1f  & %.1f \\\\ \hline''' % tuple(gpu)
-f = open("table.tex", "w")
-f.write(table)
+#table = '''{\\bf 512} & %.1f & %.1f & %.1f & %.1f & %.1f  & %.1f  & %.1f  \\\\ \hline
+#{\\bf 2048} & %.1f & %.1f & %.1f & %.1f & %.1f  & %.1f  & %.1f \\\\ \hline
+#{\\bf 8192} & %.1f & %.1f & %.1f & %.1f & %.1f  & %.1f  & %.1f \\\\ \hline
+#{\\bf 32768} & %.1f & %.1f & %.1f & %.1f & %.1f & %.1f  & %.1f \\\\ \hline''' % tuple(gpu)
+#f = open("table.tex", "w")
+#f.write(table)
 #print(table)

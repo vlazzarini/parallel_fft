@@ -120,7 +120,7 @@ namespace csnd {
       }
       MTL::Device *device = (MTL::Device*)mtldevices->object(devidx);
       const char *name = device->name()->utf8String();
-      csound->message("using device: ");
+      csound->message("using Metal device: ");
       csound->message(name);
       csound->message("\n");
 
@@ -285,7 +285,7 @@ namespace csnd {
       }
       MTL::Device *device = (MTL::Device*)mtldevices->object(devidx);
       const char *name = device->name()->utf8String();
-      csound->message("using device: ");
+      csound->message("using Metal device: ");
       csound->message(name);
       csound->message("\n");
 
@@ -386,7 +386,7 @@ namespace csnd {
       }
       MTL::Device *device = (MTL::Device*)mtldevices->object(devidx);
       const char *name = device->name()->utf8String();
-      csound->message("using device: ");
+      csound->message("using Metal device: ");
       csound->message(name);
       csound->message("\n");
 

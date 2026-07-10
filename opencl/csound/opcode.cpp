@@ -59,7 +59,7 @@ namespace csnd {
           return csound->init_error("failed to find an OpenCL device!\n");
         id = device_ids[(int)inargs[2]];
         clGetDeviceInfo(id, CL_DEVICE_NAME, 128, name, NULL);
-        csound->message("using device: ");
+        csound->message("using OpenCL device: ");
         csound->message(name);
         dft = new cl_fft::Clcfft(id, np2(input.len()), inargs[1] ? true : false);
         if ((err = dft->get_error()) > 0) 
@@ -117,7 +117,7 @@ namespace csnd {
            return csound->init_error("failed to find an OpenCL device!\n");
          id = device_ids[(int)inargs[2]];
          clGetDeviceInfo(id, CL_DEVICE_NAME, 128, name, NULL);
-         csound->message("using device: ");
+         csound->message("using OpenCL device: ");
          csound->message(name);
          dft = new cl_fft::Clrfft(id, np2(input.len()), inargs[1] ? true : false);
          if ((err = dft->get_error()) > 0) 
@@ -178,7 +178,7 @@ namespace csnd {
         return csound->init_error("failed to find an OpenCL device!\n");
       id = device_ids[(int)inargs[3]];
       clGetDeviceInfo(id, CL_DEVICE_NAME, 128, name, NULL);
-      csound->message("using device: ");
+      csound->message("using OpenCL device: ");
       csound->message(name);
       ir.init(csound, inargs(1));
       parts = inargs[2];
@@ -276,7 +276,7 @@ namespace csnd {
         return csound->init_error("failed to find an OpenCL device!\n");
       id = device_ids[(int)inargs[6]];
       clGetDeviceInfo(id, CL_DEVICE_NAME, 128, name, NULL);
-      csound->message("using device: ");
+      csound->message("using OpenCL device: ");
       csound->message(name);
       size = inargs[5];
       parts = inargs[4];
@@ -370,7 +370,7 @@ namespace csnd {
         return csound->init_error("failed to find an OpenCL device!\n");
       id = device_ids[(int)inargs[8]];
       clGetDeviceInfo(id, CL_DEVICE_NAME, 128, name, NULL);
-      csound->message("using device: ");
+      csound->message("using OpenCL device: ");
       csound->message(name);
       size = inargs[7];
       parts = inargs[6];

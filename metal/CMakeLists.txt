@@ -18,4 +18,11 @@ set_property(TARGET mt_fft PROPERTY CXX_STANDARD 17)
 set_property(TARGET test_mt_cfft PROPERTY CXX_STANDARD 17)
 set_property(TARGET test_mt_rfft PROPERTY CXX_STANDARD 17)
 
+# Per-target aggressive optimisations for numerical code (Obj-C++ Metal sources)
+foreach(tgt mt_fft test_mt_cfft test_mt_rfft)
+  target_compile_options(${tgt} PRIVATE
+    $<$<CONFIG:RELEASE>:-ffast-math -funroll-loops>
+  )
+endforeach()
+
 add_subdirectory(csound)

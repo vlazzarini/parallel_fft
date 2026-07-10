@@ -18,4 +18,11 @@ set_property(TARGET cl_fft PROPERTY CXX_STANDARD 14)
 set_property(TARGET test_cfft PROPERTY CXX_STANDARD 14)
 set_property(TARGET test_rfft PROPERTY CXX_STANDARD 14)
 
+# Per-target aggressive optimisations for numerical code
+foreach(tgt cl_fft test_cfft test_rfft)
+  target_compile_options(${tgt} PRIVATE
+    $<$<CONFIG:RELEASE>:-ffast-math -funroll-loops>
+  )
+endforeach()
+
 add_subdirectory(csound)
